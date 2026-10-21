@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mesa de Compras do Galpão</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+/* Layout: barra de abas fixa no topo; cada aba é uma bancada de trabalho (formulário + resultado) que empilha no celular */
+:root{
+  --bg:#EEF0EC; --panel:#FFFFFF; --ink:#1A1E23; --muted:#5E6670; --line:#D5D9D3;
+  --tape:#F2C230; --tape-ink:#2A2200; --act:#1E5BB8; --act-ink:#FFFFFF; --act-soft:#E3ECF8;
+  --good:#1F7A45; --good-soft:#E2F2E8; --warn:#9A6400; --warn-soft:#FBF0D6; --bad:#B3261E; --bad-soft:#F9E3E1;
+  --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-num:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#14171B; --panel:#1C2026; --ink:#E7EAEE; --muted:#9AA3AD; --line:#2E343C;
+  --tape:#E5B729; --tape-ink:#1E1800; --act:#6FA0EC; --act-ink:#0D1626; --act-soft:#1F2B3D;
+  --good:#5CC48A; --good-soft:#16291F; --warn:#E3AE4A; --warn-soft:#2B2414; --bad:#F08A82; --bad-soft:#341A19;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#14171B; --panel:#1C2026; --ink:#E7EAEE; --muted:#9AA3AD; --line:#2E343C;
+  --tape:#E5B729; --tape-ink:#1E1800; --act:#6FA0EC; --act-ink:#0D1626; --act-soft:#1F2B3D;
+  --good:#5CC48A; --good-soft:#16291F; --warn:#E3AE4A; --warn-soft:#2B2414; --bad:#F08A82; --bad-soft:#341A19;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--ink)}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--ink);color:var(--bg)}
+header .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:8px 24px;padding-block:12px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand b{font-family:var(--f-display);font-size:26px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;line-height:1}
+.brand span.tag{background:var(--tape);color:var(--tape-ink);font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.08em;padding:2px 8px;text-transform:uppercase}
+nav{display:flex;gap:4px;flex-wrap:wrap}
+nav button{font-family:var(--f-display);font-size:17px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;background:transparent;color:var(--bg);border:0;padding:6px 12px;cursor:pointer;border-bottom:3px solid transparent;opacity:.75}
+nav button[aria-selected="true"]{opacity:1;border-bottom-color:var(--tape)}
+nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--act);outline-offset:2px}
+main .wrap{padding-block:24px 64px;display:grid;gap:20px}
+h2{font-family:var(--f-display);font-size:28px;font-weight:700;text-transform:uppercase;letter-spacing:.02em;margin:0;line-height:1.1;text-wrap:balance}
+h3{font-family:var(--f-display);font-size:19px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin:0}
+.lead{color:var(--muted);margin:4px 0 0;max-width:68ch}
+.formula{font-family:var(--f-num);font-size:13px;background:var(--panel);border:1px dashed var(--line);padding:10px 12px;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+.formula i{font-style:normal;color:var(--muted)}
+.formula b{background:var(--tape);color:var(--tape-ink);padding:0 6px;font-weight:600}
+.bench{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.bench{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--panel);border:1px solid var(--line);padding:18px;display:grid;gap:14px;min-width:0}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+.fields .full{grid-column:1/-1}
+label{display:grid;gap:4px;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+input,select,textarea{font:inherit;font-size:15px;color:var(--ink);background:var(--bg);border:1px solid var(--line);padding:8px 10px;width:100%;min-width:0;text-transform:none;letter-spacing:0;font-weight:400}
+input[type="checkbox"]{width:auto}
+input.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+textarea{min-height:90px;resize:vertical}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+button.b{font:inherit;font-weight:600;font-size:14px;border:1px solid var(--act);background:var(--act);color:var(--act-ink);padding:9px 14px;cursor:pointer}
+button.b.ghost{background:transparent;color:var(--act)}
+button.b.tape{background:var(--tape);border-color:var(--tape);color:var(--tape-ink)}
+button.b:disabled{opacity:.5;cursor:default}
+button.x{font:inherit;font-size:12px;background:transparent;border:1px solid var(--line);color:var(--muted);padding:3px 8px;cursor:pointer}
+button.x.armed{border-color:var(--bad);color:var(--bad);background:var(--bad-soft)}
+.chain{display:grid;gap:0;border:1px solid var(--line)}
+.chain div{display:flex;justify-content:space-between;gap:12px;padding:8px 12px;border-top:1px solid var(--line);font-size:14px}
+.chain div:first-child{border-top:0}
+.chain div span:last-child{font-family:var(--f-num);font-variant-numeric:tabular-nums;font-weight:600}
+.chain .hl{background:var(--tape);color:var(--tape-ink)}
+.pill{font-size:12px;font-weight:700;padding:2px 8px;letter-spacing:.03em;white-space:nowrap}
+.pill.good{background:var(--good-soft);color:var(--good)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.pill.idle{background:var(--bg);color:var(--muted)}
+.res-top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+@media (max-width:560px){.res-top{grid-template-columns:minmax(0,1fr)}}
+.kv{display:flex;justify-content:space-between;gap:10px;font-size:14px;padding:6px 0;border-top:1px solid var(--line)}
+.kv:first-child{border-top:0}
+.kv span:last-child{font-family:var(--f-num);font-variant-numeric:tabular-nums;text-align:right}
+.answer{background:var(--tape);color:var(--tape-ink);padding:14px 16px;display:grid;gap:2px}
+.answer .lbl{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+.answer .big{font-family:var(--f-num);font-size:34px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
+.targets{width:100%;border-collapse:collapse;font-size:14px}
+.targets th,.targets td{padding:7px 6px;border-top:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums}
+.targets th:first-child,.targets td:first-child{text-align:left}
+.targets th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.targets td{font-family:var(--f-num)}
+.targets tr.ten td{font-weight:700}
+.small{font-size:12px;color:var(--muted)}
+.found{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.found span{font-family:var(--f-num);font-size:12px;background:var(--bg);border:1px solid var(--line);padding:1px 6px}
+.found em{font-style:normal;font-size:12px;color:var(--muted);margin-left:4px}
+details{border:1px solid var(--line);background:var(--panel)}
+summary{cursor:pointer;padding:10px 14px;font-weight:600;font-size:14px}
+details .scroll{border:0;border-top:1px solid var(--line)}
+.status{font-size:13px;color:var(--muted);min-height:1.5em}
+.status.err{color:var(--bad)}
+.scroll{overflow-x:auto;border:1px solid var(--line);background:var(--panel)}
+table.list{width:100%;border-collapse:collapse;font-size:13px}
+table.list th,table.list td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+table.list th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;background:var(--bg)}
+table.list td{font-family:var(--f-num)}
+table.list td.t,table.list th.t{text-align:left;font-family:var(--f-body);white-space:normal}
+table.list td.gp{background:var(--tape);color:var(--tape-ink);font-weight:600}
+table.wide{min-width:880px}
+.empty{padding:28px 18px;text-align:center;color:var(--muted)}
+.tot{display:flex;flex-wrap:wrap;gap:8px 28px;font-size:14px}
+.tot b{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.drop{border:2px dashed var(--line);padding:14px;text-align:center;color:var(--muted);font-size:13px;display:grid;gap:8px;justify-items:center}
+.drop img{max-height:120px;max-width:100%}
+.note{font-size:13px;color:var(--muted);border-left:3px solid var(--tape);padding:4px 10px;max-width:80ch}
+.fee-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;align-items:start}
+.tier{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.tier.head span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.chk{display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:14px;color:var(--ink);font-weight:500}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="brand"><b>Mesa de Compras</b><span class="tag">Galpão</span></div>
+    <nav role="tablist">
+      <button role="tab" id="tab-pesquisa" aria-selected="true" data-v="pesquisa">Pesquisa de preço</button>
+      <button role="tab" id="tab-compras" aria-selected="false" data-v="compras">Compras</button>
+      <button role="tab" id="tab-taxas" aria-selected="false" data-v="taxas">Taxas</button>
+    </nav>
+    <form method="post" action="/logout" style="margin-left:auto"><button class="x" style="color:var(--bg);border-color:currentColor" type="submit">Sair</button></form>
+  </div>
+</header>
+
+<main>
+<!-- ============ PESQUISA ============ -->
+<section id="v-pesquisa"><div class="wrap">
+  <div>
+    <h2>Quanto posso pagar?</h2>
+    <p class="lead">Fotografe ou digite o produto. A IA busca o preço praticado nos marketplaces, ou lê os preços que você colar, e faz a conta reversa com a média das taxas de todos os marketplaces ativos.</p>
+  </div>
+  <div class="formula"><i>compra</i> → <b>÷ 0,70</b> <i>= preço galpão</i> → <i>+ taxa média dos marketplaces</i> → <i>sobra do seller</i></div>
+
+  <div class="bench">
+    <div class="panel">
+      <h3>Produto</h3>
+      <div class="drop" id="drop">
+        <img id="fotoPrev" hidden alt="Foto do produto">
+        <span id="dropTxt">Fotografe o produto e a busca começa sozinha</span>
+        <div class="btns" style="justify-content:center">
+          <button type="button" class="b" id="btnCamera">Tirar foto</button>
+          <button type="button" class="b ghost" id="btnGaleria">Escolher da galeria</button>
+        </div>
+        <input type="file" id="foto" accept="image/*" capture="environment" hidden>
+        <input type="file" id="fotoGal" accept="image/*" hidden>
+      </div>
+      <div class="fields">
+        <label class="full">Nome do produto<input id="pNome" placeholder="ex.: touca de cetim dupla face"></label>
+        <label>Código / EAN<input id="pCod" placeholder="opcional"></label>
+        <label>Meu custo (R$)<input id="pCusto" class="num" inputmode="decimal" placeholder="já com desconto"></label>
+      </div>
+      <div class="btns"><button class="b" id="btnBuscar">Buscar preços com IA</button></div>
+      <div class="status" id="stBusca" aria-live="polite"></div>
+
+      <h3>Preços que eu encontrei</h3>
+      <p class="small" style="margin:0">Cole links, textos de anúncios ou valores, ou mande prints. A IA junta tudo.</p>
+      <textarea id="colar" placeholder="ex.: ML 29,90 / 32,50 · Shopee 27,90 · TikTok 25,99"></textarea>
+      <div class="btns">
+        <label class="b ghost" style="display:inline-flex;text-transform:none;letter-spacing:0;font-size:14px;cursor:pointer;color:var(--act);border:1px solid var(--act);padding:9px 14px" for="prints">Adicionar prints</label>
+        <input type="file" id="prints" accept="image/*" multiple hidden>
+        <button type="button" class="b ghost" id="btnPrintCam">Fotografar tela ou etiqueta</button>
+        <input type="file" id="printsCam" accept="image/*" capture="environment" hidden>
+        <button class="b" id="btnLer">Ler com IA</button>
+      </div>
+      <div class="small" id="printsInfo"></div>
+      <div class="status" id="stColar" aria-live="polite"></div>
+    </div>
+
+    <div style="display:grid;gap:14px;min-width:0">
+      <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+          <h3 id="resTitulo">Resultado</h3>
+          <span class="pill idle" id="exemploTag">Exemplo · troque pelos seus valores</span>
+        </div>
+        <div class="res-top">
+          <div style="display:grid;gap:10px;align-content:start">
+            <label>Preço de venda de referência (R$)<input id="refV" class="num" inputmode="decimal" placeholder="digite ou busque"></label>
+            <div class="found" id="found"></div>
+            <div id="resConta"></div>
+          </div>
+          <div style="display:grid;gap:10px;align-content:start">
+            <div class="answer"><span class="lbl" id="ansLbl">Pagar até (seller com 10%)</span><span class="big" id="ansVal">—</span><span class="small" style="color:inherit" id="ansSub"></span></div>
+            <div id="resStatus"></div>
+          </div>
+        </div>
+        <table class="targets" id="tgt"></table>
+      </div>
+      <details id="detalhe">
+        <summary>Ver por marketplace</summary>
+        <div class="scroll"><table class="list" id="detTab"></table></div>
+      </details>
+      <div class="btns"><button class="b tape" id="btnSalvarPesq">Salvar na lista de compras</button></div>
+      <div class="status" id="stSalvar" aria-live="polite"></div>
+    </div>
+  </div>
+</div></section>
+
+<!-- ============ COMPRAS ============ -->
+<section id="v-compras" hidden><div class="wrap">
+  <div>
+    <h2>Lista de compras</h2>
+    <p class="lead">Tudo o que você comprou: preço de tabela, desconto, custo real, preço do galpão e o que sobra para o seller na média dos marketplaces.</p>
+  </div>
+  <div class="bench">
+    <form class="panel" id="formCompra">
+      <h3>Nova compra</h3>
+      <div class="fields">
+        <label class="full">Produto<input id="cNome" required placeholder="nome do produto"></label>
+        <label>Código<input id="cCod"></label>
+        <label>Fornecedor<input id="cForn"></label>
+        <label>Quantidade<input id="cQtd" class="num" inputmode="numeric" value="1"></label>
+        <label>Preço de tabela (R$)<input id="cTab" class="num" inputmode="decimal" required></label>
+        <label>Desconto (%)<input id="cDesc" class="num" inputmode="decimal" value="0"></label>
+        <label>Preço de venda no mkt (R$)<input id="cVenda" class="num" inputmode="decimal" placeholder="opcional"></label>
+      </div>
+      <div class="chain" id="cChain"></div>
+      <div class="btns"><button class="b" type="submit" id="btnAddCompra">Adicionar compra</button></div>
+      <div class="status" id="stCompra" aria-live="polite"></div>
+    </form>
+    <div style="display:grid;gap:12px;min-width:0">
+      <div class="tot" id="totais"></div>
+      <div class="scroll">
+        <table class="list wide">
+          <thead><tr>
+            <th class="t">Produto</th><th>Qtd</th><th>Tabela</th><th>Desc.</th><th>Custo real</th><th>Galpão ÷0,70</th><th>Venda mkt</th>
+            <th>Sobra seller</th><th>Pagar até (10%)</th><th>Total pago</th><th></th>
+          </tr></thead>
+          <tbody id="listaBody"></tbody>
+        </table>
+        <div class="empty" id="listaVazia">Nenhuma compra ainda. Preencha a nova compra ao lado ou salve um resultado da Pesquisa de preço.</div>
+      </div>
+      <p class="small" style="margin:0">Sobra seller e Pagar até usam a média das taxas dos marketplaces ativos no preço de venda informado.</p>
+    </div>
+  </div>
+</div></section>
+
+<!-- ============ TAXAS ============ -->
+<section id="v-taxas" hidden><div class="wrap">
+  <div>
+    <h2>Taxas e margens</h2>
+    <p class="lead">Tabelas da sua calculadora de precificação. Marque quais marketplaces entram na média. Em cada faixa: até quanto vale (R$), comissão (%) e taxa fixa (R$).</p>
+  </div>
+  <div class="fee-grid">
+    <div class="panel">
+      <h3>Galpão e seller</h3>
+      <label>Divisor da margem do galpão<input id="fDiv" class="num" inputmode="decimal"></label>
+      <label>Margem líquida alvo do seller (%)<input id="fAlvo" class="num" inputmode="decimal"></label>
+      <label>Imposto do seller (% da venda)<input id="fImp" class="num" inputmode="decimal"></label>
+      <label>Custo extra do seller por item (R$)<input id="fExtra" class="num" inputmode="decimal"></label>
+      <p class="small" style="margin:0">Embalagem, etiqueta etc. Deixe 0 para ignorar.</p>
+    </div>
+  </div>
+  <div class="fee-grid" id="feeMkts"></div>
+  <div class="btns"><button class="b" id="btnSalvarTaxas">Salvar taxas</button><button class="b ghost" id="btnPadrao">Voltar ao padrão</button></div>
+  <div class="status" id="stTaxas" aria-live="polite"></div>
+  <p class="note">Mercado Livre usa o meio da faixa da categoria: 12,5% no Clássico (11% a 14%) e 17,5% no Premium (16% a 19%). Kwai usa 17% (14% a 20%) e Shein usa 18% (outras categorias). Ajuste se o seu produto for de outra categoria.</p>
+</div></section>
+</main>
+
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const BRL=v=>isFinite(v)?v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"}):"—";
+const PCT=v=>isFinite(v)?(v*100).toLocaleString("pt-BR",{maximumFractionDigits:1})+"%":"—";
+function num(s){if(s==null)return NaN;s=String(s).trim().replace(/[R$\s]/g,"");if(!s)return NaN;
+  if(s.includes(",")){s=s.replace(/\./g,"").replace(",",".")}return parseFloat(s)}
+function fmt(v){return String(Math.round(v*100)/100).replace(".",",")}
+function esc(s){return String(s??"").replace(/[&<>"]/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]))}
+const INF=999999;
+
+/* ---------- configuração ---------- */
+const ML_FX=(p)=>[{ate:12.5,pct:p,fixo:0},{ate:29,pct:p,fixo:6.25},{ate:50,pct:p,fixo:6.5},{ate:79,pct:p,fixo:6.75},{ate:INF,pct:p,fixo:0}];
+const PADRAO={
+  div:0.70, alvo:10, imp:0, extra:0,
+  mkts:[
+    {k:"shopee_cnpj",nome:"Shopee CNPJ",ativo:true,tiers:[{ate:79.99,pct:20,fixo:4},{ate:99.99,pct:14,fixo:16},{ate:199.99,pct:14,fixo:20},{ate:INF,pct:14,fixo:26}]},
+    {k:"shopee_cpf",nome:"Shopee CPF",ativo:true,tiers:[{ate:7.99,pct:50,fixo:3},{ate:79.99,pct:20,fixo:7},{ate:99.99,pct:14,fixo:19},{ate:199.99,pct:14,fixo:23},{ate:499.99,pct:14,fixo:23},{ate:INF,pct:14,fixo:29}]},
+    {k:"ml_classico",nome:"Mercado Livre Clássico",ativo:true,tiers:ML_FX(12.5)},
+    {k:"ml_premium",nome:"Mercado Livre Premium",ativo:true,tiers:ML_FX(17.5)},
+    {k:"tiktok",nome:"TikTok Shop",ativo:true,tiers:[{ate:INF,pct:14,fixo:4}]},
+    {k:"kwai",nome:"Kwai Shop",ativo:true,tiers:[{ate:INF,pct:17,fixo:4}]},
+    {k:"shein",nome:"Shein",ativo:true,tiers:[{ate:INF,pct:18,fixo:5}]}
+  ]
+};
+const clone=o=>JSON.parse(JSON.stringify(o));
+let cfg=clone(PADRAO);
+
+function feeOf(m,V){const t=m.tiers.find(x=>V<=x.ate)||m.tiers[m.tiers.length-1];return V*t.pct/100+t.fixo}
+function ativos(){return cfg.mkts.filter(m=>m.ativo)}
+function feeMedia(V){const a=ativos();if(!a.length)return 0;return a.reduce((s,m)=>s+feeOf(m,V),0)/a.length}
+function galpao(c){return c/cfg.div}
+function custosSeller(V,fee){return fee+V*cfg.imp/100+cfg.extra}
+function sobra(V,g,fee){return V-custosSeller(V,fee)-g}
+function pagarAte(V,m,fee){const g=V-custosSeller(V,fee)-m*V;return {g,c:g*cfg.div}}
+function pillFor(m){const a=cfg.alvo/100;if(!isFinite(m))return ["idle","—"];
+  if(m>=a)return ["good","bate "+fmt(cfg.alvo)+"%"];if(m>=0.03)return ["warn","abaixo de "+fmt(cfg.alvo)+"%"];return ["bad","sem margem"]}
+
+/* ---------- abas ---------- */
+const tabs=[...document.querySelectorAll("nav button")];const VIEWS=["pesquisa","compras","taxas"];
+function show(v){tabs.forEach(b=>b.setAttribute("aria-selected",b.dataset.v===v));VIEWS.forEach(x=>$("v-"+x).hidden=x!==v);
+  try{localStorage.setItem("mc-aba",v)}catch(e){}}
+tabs.forEach(b=>b.onclick=()=>show(b.dataset.v));
+let first=(location.hash||"").slice(1);if(!VIEWS.includes(first)){try{first=localStorage.getItem("mc-aba")||"pesquisa"}catch(e){first="pesquisa"}}
+show(VIEWS.includes(first)?first:"pesquisa");
+
+/* ---------- PESQUISA ---------- */
+const NOMES_FONTE={ml:"ML",shopee:"Shopee",tiktok:"TikTok",outros:"Outros"};
+const precos={ml:[],shopee:[],tiktok:[],outros:[]};
+let refV=NaN,refManual=false,exemplo=true;
+$("pNome").value="Touca de cetim (exemplo)";$("pCusto").value="8,00";
+precos.ml=[29.9,32.5,27.9];precos.shopee=[27.9,25.9,29.9];precos.tiktok=[24.9,26.9];
+function mediana(a){if(!a.length)return NaN;const s=[...a].sort((x,y)=>x-y);const m=Math.floor(s.length/2);return s.length%2?s[m]:(s[m-1]+s[m])/2}
+function todos(){return [].concat(precos.ml,precos.shopee,precos.tiktok,precos.outros)}
+function atualizaRef(){if(!refManual){refV=mediana(todos());$("refV").value=isFinite(refV)?fmt(refV):""}}
+atualizaRef();
+$("refV").addEventListener("input",()=>{refV=num($("refV").value);refManual=isFinite(refV);exemplo=false;renderRes()});
+
+function renderRes(){
+  const custo=num($("pCusto").value),g=isFinite(custo)?galpao(custo):NaN,V=refV;
+  $("resTitulo").textContent=$("pNome").value.trim()||"Resultado";$("exemploTag").hidden=!exemplo;
+  const all=todos();
+  $("found").innerHTML=all.length
+    ?Object.keys(precos).filter(k=>precos[k].length).map(k=>`<em>${NOMES_FONTE[k]}</em>`+precos[k].map(p=>`<span>${BRL(p)}</span>`).join("")).join("")
+     +`<em>· referência = mediana de ${all.length} preço(s)</em>`
+    :'<em>Nenhum preço ainda. Busque, cole ou digite acima.</em>';
+  const n=ativos().length;
+  if(!isFinite(V)){$("resConta").innerHTML="";$("ansVal").textContent="—";$("ansSub").textContent="";$("resStatus").innerHTML="";$("tgt").innerHTML="";$("detTab").innerHTML="";return}
+  const fee=feeMedia(V);
+  let h=`<div class="kv"><span>Taxa média (${n} marketplaces)</span><span>${BRL(fee)} · ${PCT(fee/V)}</span></div>`;
+  if(cfg.imp)h+=`<div class="kv"><span>Imposto ${fmt(cfg.imp)}%</span><span>${BRL(V*cfg.imp/100)}</span></div>`;
+  if(cfg.extra)h+=`<div class="kv"><span>Custo extra</span><span>${BRL(cfg.extra)}</span></div>`;
+  if(isFinite(custo)){h+=`<div class="kv"><span>Meu custo</span><span>${BRL(custo)}</span></div><div class="kv"><span>Preço galpão (÷${fmt(cfg.div)})</span><span>${BRL(g)}</span></div>`}
+  $("resConta").innerHTML=`<div>${h}</div>`;
+  const alvo=pagarAte(V,cfg.alvo/100,fee);
+  $("ansLbl").textContent=`Pagar até (seller com ${fmt(cfg.alvo)}%)`;
+  $("ansVal").textContent=BRL(alvo.c);
+  $("ansSub").textContent=`galpão vende a ${BRL(alvo.g)} · seller lucra ${BRL(V*cfg.alvo/100)}`;
+  if(isFinite(g)){const s=sobra(V,g,fee),m=s/V;const [cls,lbl]=pillFor(m);
+    $("resStatus").innerHTML=`<div class="kv"><span>Com o seu custo, sobra p/ seller</span><span>${BRL(s)} · ${PCT(m)} <span class="pill ${cls}">${lbl}</span></span></div>`
+      +(alvo.c<custo?`<div class="kv"><span>Você está pagando a mais</span><span>${BRL(custo-alvo.c)}</span></div>`:`<div class="kv"><span>Folga até o limite</span><span>${BRL(alvo.c-custo)}</span></div>`)}
+  else $("resStatus").innerHTML='<p class="small" style="margin:0">Informe o seu custo para ver a sobra do seller.</p>';
+  const alvos=[3,6,9,cfg.alvo].filter((v,i,a)=>a.indexOf(v)===i).sort((a,b)=>a-b);
+  $("tgt").innerHTML=`<thead><tr><th>Seller ganha</th><th>Lucro</th><th>Galpão vende até</th><th>Você paga até</th></tr></thead><tbody>`
+    +alvos.map(t=>{const r=pagarAte(V,t/100,fee);return `<tr class="${t===cfg.alvo?"ten":""}"><td>${fmt(t)}%</td><td>${BRL(V*t/100)}</td><td>${BRL(r.g)}</td><td>${BRL(r.c)}</td></tr>`}).join("")+`</tbody>`;
+  // detalhe por marketplace
+  const fees=ativos().map(m=>({m,f:feeOf(m,V)})).sort((a,b)=>a.f-b.f);
+  $("detTab").innerHTML=`<thead><tr><th class="t">Marketplace</th><th>Taxa</th><th>% da venda</th>${isFinite(g)?"<th>Sobra seller</th>":""}<th>Pagar até (${fmt(cfg.alvo)}%)</th></tr></thead><tbody>`
+    +fees.map(({m,f})=>{const s=isFinite(g)?sobra(V,g,f):NaN;const [cls]=pillFor(s/V);
+      return `<tr><td class="t">${esc(m.nome)}</td><td>${BRL(f)}</td><td>${PCT(f/V)}</td>${isFinite(g)?`<td><span class="pill ${cls}">${BRL(s)} · ${PCT(s/V)}</span></td>`:""}<td>${BRL(pagarAte(V,cfg.alvo/100,f).c)}</td></tr>`}).join("")+`</tbody>`;
+  if(fees.length>1)$("detalhe").querySelector("summary").textContent=`Ver por marketplace · mais barato: ${fees[0].m.nome} · mais caro: ${fees[fees.length-1].m.nome}`;
+}
+["pCusto","pNome"].forEach(id=>$(id).addEventListener("input",()=>{exemplo=false;renderRes()}));
+
+/* fotos */
+let fotoBlob=null,printBlobs=[];
+$("btnCamera").onclick=()=>$("foto").click();
+$("btnGaleria").onclick=()=>$("fotoGal").click();
+function setFoto(inp){const f=inp.files[0];if(!f)return;fotoBlob=f;inp.value="";
+  $("fotoPrev").src=URL.createObjectURL(f);$("fotoPrev").hidden=false;$("dropTxt").textContent="Foto pronta";$("btnCamera").textContent="Tirar outra";
+  if(exemplo){$("pNome").value="";$("pCusto").value="";for(const k in precos)precos[k]=[];refManual=false;atualizaRef()}
+  exemplo=false;renderRes();if(!$("btnBuscar").disabled)$("btnBuscar").click()}
+$("foto").onchange=()=>setFoto($("foto"));$("fotoGal").onchange=()=>setFoto($("fotoGal"));
+function addPrints(inp){printBlobs=printBlobs.concat([...inp.files]).slice(-5);inp.value="";
+  $("printsInfo").textContent=printBlobs.length?printBlobs.length+" imagem(ns) pronta(s) para ler":""}
+$("prints").onchange=()=>addPrints($("prints"));$("printsCam").onchange=()=>addPrints($("printsCam"));
+$("btnPrintCam").onclick=()=>$("printsCam").click();
+
+/* IA (servidor) */
+let iaOn=false;
+async function api(url,opts={}){const r=await fetch(url,{credentials:"same-origin",...opts});
+  if(r.status===401){location.href="/login";throw {erro:"Faça login"}}
+  let d=null;try{d=await r.json()}catch(e){}
+  if(!r.ok)throw {erro:(d&&(d.erro||d.detail))||"Falha na comunicação com o servidor."};return d}
+const ready=api("/api/status").then(d=>{iaOn=!!(d&&d.ia)}).catch(()=>{});
+function iaErr(e){return (e&&e.erro)||"A IA não respondeu agora. Tente de novo."}
+function limpa(a){return Array.isArray(a)?a.map(Number).filter(v=>isFinite(v)&&v>0):[]}
+
+async function identificar(){
+  const nome=$("pNome").value.trim(),cod=$("pCod").value.trim();
+  if(!fotoBlob)return nome||cod;
+  const fd=new FormData();fd.append("foto",fotoBlob);fd.append("nome",nome);fd.append("cod",cod);
+  const r=await api("/api/ia/identificar",{method:"POST",body:fd});
+  if(r&&r.nome&&!nome)$("pNome").value=String(r.nome);
+  return String((r&&r.busca)||nome||cod);
+}
+$("btnBuscar").onclick=async()=>{
+  const st=$("stBusca");st.className="status";await ready;
+  if(!iaOn){st.className="status err";st.textContent="A IA não está configurada no servidor. Digite o preço de referência ou os preços que você encontrou.";return}
+  if(!fotoBlob&&!$("pNome").value.trim()&&!$("pCod").value.trim()){st.className="status err";st.textContent="Tire uma foto ou digite o nome ou o código.";return}
+  const btn=$("btnBuscar");btn.disabled=true;
+  if(exemplo){for(const k in precos)precos[k]=[];exemplo=false}
+  refManual=false;
+  try{
+    st.textContent="Identificando o produto…";
+    const q=await identificar();renderRes();
+    st.textContent=`Pesquisando "${q}" no Mercado Livre, Shopee e TikTok Shop… (leva uns 20 a 40 segundos)`;
+    const r=await api("/api/ia/buscar",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({termo:q})});
+    const faltam=[];
+    for(const [k,n] of [["ml","Mercado Livre"],["shopee","Shopee"],["tiktok","TikTok Shop"]]){const a=limpa(r&&r[k]);if(a.length)precos[k]=a;else faltam.push(n)}
+    st.textContent=`Busca: "${q}". `+(faltam.length?`Sem preço em: ${faltam.join(", ")}. Cole os que faltarem abaixo.`:"Pronto.");
+  }catch(e){st.className="status err";st.textContent=iaErr(e)}
+  finally{btn.disabled=false;atualizaRef();renderRes()}
+};
+$("btnLer").onclick=async()=>{
+  const st=$("stColar");st.className="status";await ready;const txt=$("colar").value.trim();
+  if(!txt&&!printBlobs.length){st.className="status err";st.textContent="Cole algum texto ou adicione prints.";return}
+  if(!iaOn){st.className="status err";st.textContent="A IA não está configurada no servidor. Digite o preço de referência.";return}
+  $("btnLer").disabled=true;st.textContent="Lendo os preços…";
+  if(exemplo){for(const k in precos)precos[k]=[];exemplo=false}
+  try{const fd=new FormData();fd.append("texto",txt);fd.append("nome",$("pNome").value.trim());
+    for(const b of printBlobs.slice(0,5))fd.append("imagens",b);
+    const r=await api("/api/ia/ler",{method:"POST",body:fd});
+    let n=0;for(const k of Object.keys(precos)){const a=limpa(r&&r[k]);if(a.length){precos[k]=a;n+=a.length}}
+    refManual=false;atualizaRef();renderRes();printBlobs=[];$("printsInfo").textContent="";
+    st.textContent=n?`${n} preço(s) lido(s).`:"Não encontrei preços nesse texto.";
+  }catch(e){st.className="status err";st.textContent=iaErr(e)}
+  finally{$("btnLer").disabled=false}
+};
+
+/* ---------- COMPRAS ---------- */
+let compras=[];
+function vendaDe(c){const v=c.venda;if(typeof v==="number")return v;if(v&&typeof v==="object"){const a=Object.values(v).map(Number).filter(isFinite);return mediana(a)}return NaN}
+function compraCalc(c){const custo=c.tab*(1-(c.desc||0)/100),g=galpao(custo),V=vendaDe(c);
+  if(!isFinite(V))return {custo,g,V,m:NaN,lim:NaN};const f=feeMedia(V);return {custo,g,V,m:sobra(V,g,f)/V,lim:pagarAte(V,cfg.alvo/100,f).c}}
+function renderChain(){
+  const tab=num($("cTab").value),desc=num($("cDesc").value)||0,V=num($("cVenda").value);
+  if(!isFinite(tab)){$("cChain").innerHTML='<div><span class="small">Digite o preço de tabela para ver a conta.</span><span></span></div>';return}
+  const custo=tab*(1-desc/100),g=galpao(custo);
+  let h=`<div><span>Tabela</span><span>${BRL(tab)}</span></div><div><span>Desconto ${fmt(desc)}%</span><span>− ${BRL(tab-custo)}</span></div>
+    <div><span>Custo real</span><span>${BRL(custo)}</span></div><div class="hl"><span>Preço galpão (÷${fmt(cfg.div)})</span><span>${BRL(g)}</span></div>`;
+  if(isFinite(V)){const f=feeMedia(V),s=sobra(V,g,f);
+    h+=`<div><span>Taxa média mkt</span><span>${BRL(f)}</span></div><div><span>Sobra seller</span><span>${BRL(s)} · ${PCT(s/V)}</span></div><div><span>Pagar até (${fmt(cfg.alvo)}%)</span><span>${BRL(pagarAte(V,cfg.alvo/100,f).c)}</span></div>`}
+  $("cChain").innerHTML=h;
+}
+["cTab","cDesc","cVenda"].forEach(id=>$(id).addEventListener("input",renderChain));
+function renderLista(){
+  const tb=$("listaBody");tb.innerHTML="";$("listaVazia").hidden=compras.length>0;let tot=0,un=0;
+  for(const c of compras){const r=compraCalc(c),q=c.qtd||1;tot+=r.custo*q;un+=q;const [cls]=pillFor(r.m);
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td class="t"><b>${esc(c.nome)}</b><div class="small">${esc([c.cod,c.forn].filter(Boolean).join(" · "))}</div></td>
+      <td>${q}</td><td>${BRL(c.tab)}</td><td>${fmt(c.desc||0)}%</td><td>${BRL(r.custo)}</td><td class="gp">${BRL(r.g)}</td><td>${BRL(r.V)}</td>
+      <td>${isFinite(r.m)?`<span class="pill ${cls}">${PCT(r.m)}</span>`:"—"}</td><td>${BRL(r.lim)}</td><td>${BRL(r.custo*q)}</td><td><button class="x" type="button">Excluir</button></td>`;
+    const bx=tr.querySelector("button.x");
+    bx.onclick=async()=>{if(!bx.classList.contains("armed")){bx.classList.add("armed");bx.textContent="Confirmar";setTimeout(()=>{bx.classList.remove("armed");bx.textContent="Excluir"},3000);return}
+      try{await api("/api/compras/"+c.id,{method:"DELETE"});await carregaCompras()}catch(e){bx.textContent="Erro"}};
+    tb.appendChild(tr)}
+  $("totais").innerHTML=compras.length?`<span>Itens <b>${compras.length}</b></span><span>Unidades <b>${un.toLocaleString("pt-BR")}</b></span><span>Total pago <b>${BRL(tot)}</b></span><span>Valor no galpão <b>${BRL(tot/cfg.div)}</b></span>`:"";
+}
+$("formCompra").addEventListener("submit",async e=>{e.preventDefault();const st=$("stCompra");st.className="status";
+  const tab=num($("cTab").value);if(!$("cNome").value.trim()||!isFinite(tab)){st.className="status err";st.textContent="Preencha produto e preço de tabela.";return}
+  const v=num($("cVenda").value);
+  const doc={nome:$("cNome").value.trim(),cod:$("cCod").value.trim(),forn:$("cForn").value.trim(),qtd:Math.max(1,Math.round(num($("cQtd").value)||1)),
+    tab,desc:num($("cDesc").value)||0,venda:isFinite(v)?v:null,criado:Date.now()};
+  $("btnAddCompra").disabled=true;
+  try{await salvaCompra(doc);st.textContent="Compra adicionada.";
+    ["cNome","cCod","cVenda","cTab"].forEach(id=>$(id).value="");$("cDesc").value="0";$("cQtd").value="1";renderChain()}
+  catch(err){st.className="status err";st.textContent="Não consegui salvar. Tente de novo."}
+  finally{$("btnAddCompra").disabled=false}});
+$("btnSalvarPesq").onclick=async()=>{const st=$("stSalvar");st.className="status";const custo=num($("pCusto").value);
+  if(exemplo){st.className="status err";st.textContent="Isto é o exemplo. Coloque um produto seu antes de salvar.";return}
+  if(!isFinite(custo)||!$("pNome").value.trim()){st.className="status err";st.textContent="Preencha nome e meu custo para salvar.";return}
+  try{await salvaCompra({nome:$("pNome").value.trim(),cod:$("pCod").value.trim(),forn:"",qtd:1,tab:custo,desc:0,venda:isFinite(refV)?Math.round(refV*100)/100:null,criado:Date.now()});
+    st.textContent="Salvo na lista de compras."}catch(e){st.className="status err";st.textContent="Não consegui salvar. Tente de novo."}};
+
+/* ---------- TAXAS ---------- */
+const BASE=[["fDiv","div"],["fAlvo","alvo"],["fImp","imp"],["fExtra","extra"]];
+function fillTaxas(){for(const [id,k] of BASE)$(id).value=fmt(cfg[k]);
+  $("feeMkts").innerHTML=cfg.mkts.map((m,i)=>`<div class="panel"><h3>${esc(m.nome)}</h3>
+    <label class="chk"><input type="checkbox" id="mk-on-${i}" ${m.ativo?"checked":""}> Entra na média</label>
+    <div class="tier head"><span>Até R$</span><span>Comissão %</span><span>Fixo R$</span></div>
+    ${m.tiers.map((t,j)=>`<div class="tier"><input class="num" id="t-${i}-${j}-a" aria-label="Até R$" value="${t.ate>=INF?"":fmt(t.ate)}" placeholder="acima"><input class="num" id="t-${i}-${j}-p" aria-label="Comissão %" value="${fmt(t.pct)}"><input class="num" id="t-${i}-${j}-f" aria-label="Fixo R$" value="${fmt(t.fixo)}"></div>`).join("")}
+  </div>`).join("")}
+function readTaxas(){const n=clone(cfg);for(const [id,k] of BASE){const v=num($(id).value);if(isFinite(v))n[k]=v}
+  if(!(n.div>0&&n.div<=1))n.div=0.70;
+  n.mkts.forEach((m,i)=>{m.ativo=$("mk-on-"+i).checked;m.tiers=m.tiers.map((t,j)=>{const a=num($(`t-${i}-${j}-a`).value);
+    return {ate:isFinite(a)?a:INF,pct:num($(`t-${i}-${j}-p`).value)||0,fixo:num($(`t-${i}-${j}-f`).value)||0}})});return n}
+$("btnSalvarTaxas").onclick=async()=>{const st=$("stTaxas");st.className="status";cfg=readTaxas();renderAll();
+  if(!ativos().length){st.className="status err";st.textContent="Marque pelo menos um marketplace para entrar na média.";return}
+  try{await api("/api/config",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(cfg)});st.textContent="Taxas salvas."}catch(e){st.className="status err";st.textContent="Não consegui salvar as taxas."}};
+$("btnPadrao").onclick=()=>{cfg=clone(PADRAO);fillTaxas();renderAll();$("stTaxas").className="status";$("stTaxas").textContent="Valores padrão carregados. Clique em Salvar taxas para gravar."};
+
+function renderAll(){renderRes();renderChain();renderLista()}
+fillTaxas();renderAll();
+
+/* ---------- banco de dados ---------- */
+async function carregaCompras(){compras=await api("/api/compras");renderLista()}
+async function salvaCompra(doc){delete doc.criado;await api("/api/compras",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(doc)});await carregaCompras()}
+(async()=>{
+  try{const d=await api("/api/config");if(d&&Array.isArray(d.mkts)){cfg={...clone(PADRAO),...clone(d)};fillTaxas();renderAll()}}catch(e){}
+  try{await carregaCompras()}catch(e){$("listaVazia").textContent="Não consegui carregar a lista agora."}
+})();
+})();
+</script>
+</body>
+</html>

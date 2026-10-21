@@ -1,0 +1,13 @@
+[Unit]
+Description=Mesa de Compras (FastAPI)
+After=network.target postgresql.service
+
+[Service]
+WorkingDirectory=/opt/mesa-de-compras
+EnvironmentFile=/opt/mesa-de-compras/.env
+ExecStart=/opt/mesa-de-compras/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8090 --proxy-headers
+Restart=always
+User=www-data
+
+[Install]
+WantedBy=multi-user.target
